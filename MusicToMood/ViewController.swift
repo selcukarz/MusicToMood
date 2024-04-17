@@ -20,6 +20,7 @@ class ViewController: UIViewController{
         super.viewDidLoad()
         addCameraInput()
         showCameraFeed()
+        getCameraFrames()
         captureSession.startRunning()
     }
     // The account for when the container's view changes
@@ -44,5 +45,26 @@ class ViewController: UIViewController{
         previewLayer.videoGravity = .resizeAspectFill
         view.layer.addSublayer(previewLayer)
         previewLayer.frame = view.frame
+    }
+    //Adding camera output
+    private func getCameraFrames() {
+            videoDataOutput.videoSettings = [(kCVPixelBufferPixelFormatTypeKey as NSString): NSNumber(value: kCVPixelFormatType_32BGRA)] as [String: Any]
+            
+            videoDataOutput.alwaysDiscardsLateVideoFrames = true
+            // You do not want to process the frames on the Main Thread so we off load to another thread
+            videoDataOutput.setSampleBufferDelegate(self, queue: DispatchQueue(label: "camera_frame_processing_queue"))
+            captureSession.addOutput(videoDataOutput)
+            // isVideoRotationAngleSupported(T##videoRotationAngle: CGFloat##CGFloat)
+        guard let connection = videoDataOutput.connection(with: .video), connection.isVideoOrientationSupported else {
+            return
+        }
+        connection.videoOrientation = .portrait
+    }
+}
+// MARK: - AVCaptureVideoDataOutputSampleBufferDelegate
+
+extension ViewController: AVCaptureVideoDataOutputSampleBufferDelegate {
+    func captureOutput(_ output: AVCaptureOutput, didOutput sampleBuffer: CMSampleBuffer, from connection: AVCaptureConnection) {
+        print("Received a frame")
     }
 }
